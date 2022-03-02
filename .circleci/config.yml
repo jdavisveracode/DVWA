@@ -5,7 +5,7 @@ version: 2.1
 # Define a job to be invoked later in a workflow.
 # See: https://circleci.com/docs/2.0/configuration-reference/#jobs
 jobs:
-  say-hello:
+  build:
     # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
     # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
     docker:
@@ -14,22 +14,41 @@ jobs:
     # See: https://circleci.com/docs/2.0/configuration-reference/#steps
     steps:
       - checkout
-      - run:
-          name: "Say hello"
-          command: "echo Hello, World!"
-             # 'package' for uploading to Veracode
       - run: 
           name: "Package for upload to Veracode"
           #command: zip -r upload.zip nodegoat
           command: zip -r upload.zip dvwa   
+      
+  veracode_pipeline_scan:
+    # Specify the execution environment. You can specify an image from Dockerhub or use one of our Convenience Images from CircleCI's Developer Hub.
+    # See: https://circleci.com/docs/2.0/configuration-reference/#docker-machine-macos-windows-executor
+    docker:
+      - image: cimg/base:stable
+    # Add steps to the job
+    # See: https://circleci.com/docs/2.0/configuration-reference/#steps
+    steps:
+      - checkout
       - run: 
-          name: "list files"
+          name: "Run Pipeline Scan for Fast Feedback"
           #command: zip -r upload.zip nodegoat
-          command: ls
+          command: |
+             curl -sSO https://downloads.veracode.com/securityscan/pipeline-scan-LATEST.zip
+             unzip -o pipeline-scan-LATEST.zip
+             ls
+             java -jar pipeline-scan.jar --veracode_api_id=$VERACODE_API_ID --veracode_api_key=$VERACODE_API_KEY --fail_on_severity="Very High, High" --file="upload.zip"  --json_output_file="results.json"
+  
 
-# Invoke jobs via workflows
-# See: https://circleci.com/docs/2.0/configuration-reference/#workflows
+  # job to upload to Veracode for scanning
+  
+# serial jobs - need to run 'build' before 'scan'
 workflows:
-  say-hello-workflow:
+  version: 2
+  build_and_scan:
     jobs:
-      - say-hello
+      - build
+      - veracode_pipeline_scan:
+          requires:
+            - build
+      
+
+
