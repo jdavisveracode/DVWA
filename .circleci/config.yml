@@ -17,6 +17,15 @@ jobs:
       - run:
           name: "Say hello"
           command: "echo Hello, World!"
+             # 'package' for uploading to Veracode
+      - run: 
+          name: "Package for upload to Veracode"
+          #command: zip -r upload.zip nodegoat
+          command: zip -r upload.zip dvwa   
+      - run: 
+          name: "list files"
+          #command: zip -r upload.zip nodegoat
+          command: ls
 
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
